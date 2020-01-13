@@ -8,6 +8,10 @@ using Measurement.Net;
 using static Measurement.Net.MeasurementService;
 using static Time.Net.TimeService;
 using System.Linq;
+using Grpc.Core.Interceptors;
+using System.Net.Http;
+using System.Web;
+using static Greet.Net.Greeter;
 
 namespace client
 {
@@ -20,6 +24,8 @@ namespace client
             await ServerStreaming(channel);
             await ClientStreaming(channel);
             await BidirectionalStreaming(channel);
+
+            await AuthenticatedUnaryCall();
         }
 
         private static async Task ServerStreaming(ChannelBase channel)
@@ -28,7 +34,7 @@ namespace client
             using var reply = client.Subscribe(new SubscribeRequest
             {
                 Interval = 1,
-                Count = 10,
+                Count = 5,
                 Unit = SubscribeRequest.Types.Unit.Seconds
             });
 
@@ -67,7 +73,7 @@ namespace client
         private static async Task BidirectionalStreaming(ChannelBase channel)
         {
             var rand = new Random();
-            var values = Enumerable.Range(0, 10).Select(x => rand.NextDouble());
+            var values = Enumerable.Range(0, 5).Select(x => rand.NextDouble());
             var client =  new MeasurementServiceClient(channel);
             using var call = client.CalculateStream();
 
@@ -103,6 +109,41 @@ namespace client
                 writeTask,
                 readTask
             });
+        }
+
+        private static async Task AuthenticatedUnaryCall()
+        {
+            var address = "https://localhost:5001";
+            var token = await Authenticate(address);
+
+            using var channel = GrpcChannel.ForAddress(address);
+            var invoker = channel.Intercept(metadata =>
+            {
+                metadata.Add("Authorization", $"Bearer {token}");
+                return metadata;
+            });
+
+            var client = new GreeterClient(invoker);
+
+            var response = await client.SayHelloAsync(new Empty());
+
+            Console.WriteLine(response.Message);
+        }
+
+        private static async Task<string> Authenticate(string address)
+        {
+            using var client = new HttpClient();
+            var request = new HttpRequestMessage
+            {
+                RequestUri = new Uri($"{address}/generateJwtToken?name={HttpUtility.UrlEncode(Environment.UserName)}"),
+                Method = HttpMethod.Get,
+                Version = new Version(2, 0)
+            };
+
+            using var response = await client.SendAsync(request);
+            response.EnsureSuccessStatusCode();
+
+            return await response.Content.ReadAsStringAsync();
         }
     }
 }

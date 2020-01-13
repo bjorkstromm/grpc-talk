@@ -13,8 +13,8 @@ namespace server
 {
     public class MeasurementService : MeasurementServiceBase
     {
-        private readonly ILogger<TimeService> _logger;
-        public MeasurementService(ILogger<TimeService> logger)
+        private readonly ILogger<MeasurementService> _logger;
+        public MeasurementService(ILogger<MeasurementService> logger)
         {
             _logger = logger;
         }
