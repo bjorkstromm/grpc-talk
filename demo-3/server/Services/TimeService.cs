@@ -38,45 +38,5 @@ namespace server
                 await Task.Delay(timeout);
             }
         }
-
-        public override async Task<SyncResponse> Sync(
-            IAsyncStreamReader<Timestamp> requestStream,
-            ServerCallContext context)
-        {
-            var count = 0;
-            var sw = new Stopwatch();
-            sw.Start();
-
-            await foreach (var timeStamp in requestStream.ReadAllAsync())
-            {
-                // noop;
-            }
-
-            sw.Stop();
-
-            var message = $"You sent {count} timestamps over {sw.ElapsedMilliseconds}ms";
-
-            return new SyncResponse
-            {
-                Message = message
-            };
-        }
-
-        public override async Task Ping(
-            IAsyncStreamReader<Timestamp> requestStream,
-            IServerStreamWriter<Int32Value> responseStream,
-            ServerCallContext context)
-        {
-            await foreach (var timeStamp in requestStream.ReadAllAsync())
-            {
-                var now = DateTime.UtcNow;
-                var diff = now - timeStamp.ToDateTime();
-
-                await responseStream.WriteAsync(new Int32Value
-                { 
-                    Value = diff.Milliseconds
-                });
-            }
-        }
     }
 }

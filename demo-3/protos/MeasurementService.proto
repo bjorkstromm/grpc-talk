@@ -1,0 +1,21 @@
+syntax = "proto3";
+option csharp_namespace = "Measurement.Net";
+package measurement;
+
+import "google/protobuf/timestamp.proto";
+
+message MeasurementData {
+    google.protobuf.Timestamp timestamp = 1;
+    double value = 2;
+}
+
+message MeasurementResult {
+    double average = 1;
+    double median = 2;
+    int32 count = 3;
+}
+
+service MeasurementService {
+    rpc Calculate(stream MeasurementData) returns (MeasurementResult);
+    rpc CalculateStream(stream MeasurementData) returns (stream MeasurementResult);
+}

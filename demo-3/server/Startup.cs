@@ -32,6 +32,7 @@ namespace server
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapGrpcService<TimeService>();
+                endpoints.MapGrpcService<MeasurementService>();
 
                 endpoints.MapGet("/", async context =>
                 {

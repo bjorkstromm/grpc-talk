@@ -3,7 +3,6 @@ option csharp_namespace = "Time.Net";
 package time;
 
 import "google/protobuf/timestamp.proto";
-import "google/protobuf/wrappers.proto";
 
 message SubscribeRequest {
   enum Unit {
@@ -15,12 +14,6 @@ message SubscribeRequest {
   sint32 count = 3;
 }
 
-message SyncResponse {
-    string message = 1;
-}
-
 service TimeService {
   rpc Subscribe(SubscribeRequest) returns (stream google.protobuf.Timestamp);
-  rpc Sync(stream google.protobuf.Timestamp) returns (SyncResponse);
-  rpc Ping(stream google.protobuf.Timestamp) returns (stream google.protobuf.Int32Value);
 }

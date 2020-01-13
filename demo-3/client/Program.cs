@@ -1,11 +1,13 @@
 ﻿using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Grpc.Net.Client;
 using Time.Net;
+using Measurement.Net;
+using static Measurement.Net.MeasurementService;
 using static Time.Net.TimeService;
+using System.Linq;
 
 namespace client
 {
@@ -14,9 +16,15 @@ namespace client
         static async Task Main(string[] args)
         {
             using var channel = GrpcChannel.ForAddress("https://localhost:5001");
-            var client =  new TimeServiceClient(channel);
 
-            // Server streaming
+            await ServerStreaming(channel);
+            await ClientStreaming(channel);
+            await BidirectionalStreaming(channel);
+        }
+
+        private static async Task ServerStreaming(ChannelBase channel)
+        {
+            var client =  new TimeServiceClient(channel);
             using var reply = client.Subscribe(new SubscribeRequest
             {
                 Interval = 1,
@@ -29,34 +37,72 @@ namespace client
                 var dateTime = timestamp.ToDateTime();
                 Console.WriteLine($"Time is {dateTime:o}");
             }
+        }
 
-            // Client streaming
-            var sync = client.Sync();
+        private static async Task ClientStreaming(ChannelBase channel)
+        {
+            var rand = new Random();
+            var client =  new MeasurementServiceClient(channel);
+            using var call = client.Calculate();
 
             for (var i = 0; i < 10; i++)
             {
-                await sync.RequestStream.WriteAsync(
-                    Timestamp.FromDateTime(DateTime.UtcNow));
-                await Task.Delay(1000);
+                var data = new MeasurementData
+                {
+                    Timestamp = Timestamp.FromDateTimeOffset(DateTimeOffset.Now),
+                    Value = rand.NextDouble()
+                };
+
+                await call.RequestStream.WriteAsync(data);
             }
-            await sync.RequestStream.CompleteAsync();
-            var response = await sync.ResponseAsync;
 
-            Console.WriteLine(response.Message);
+            await call.RequestStream.CompleteAsync();
+            var response = await call.ResponseAsync;
 
-            // Bi-directional streaming
-            var duplex = client.Ping(deadline: DateTime.UtcNow.AddSeconds(10));
+            Console.WriteLine($"Count : {response.Count}");
+            Console.WriteLine($"Average : {response.Average}");
+            Console.WriteLine($"Median : {response.Median}");
+        }
 
-            await duplex.RequestStream.WriteAsync(
-                Timestamp.FromDateTime(DateTime.UtcNow));
+        private static async Task BidirectionalStreaming(ChannelBase channel)
+        {
+            var rand = new Random();
+            var values = Enumerable.Range(0, 10).Select(x => rand.NextDouble());
+            var client =  new MeasurementServiceClient(channel);
+            using var call = client.CalculateStream();
 
-            await foreach (var diff in duplex.ResponseStream.ReadAllAsync())
+            var writeTask = Task.Run(async () =>
             {
-                Console.WriteLine($"Diff {diff.Value}");
-                await duplex.RequestStream.WriteAsync(
-                    Timestamp.FromDateTime(DateTime.UtcNow));
-                await Task.Delay(1000);
-            }
+                foreach (var value in values)
+                {
+                    var data = new MeasurementData
+                    {
+                        Timestamp = Timestamp.FromDateTimeOffset(DateTimeOffset.Now),
+                        Value = rand.NextDouble()
+                    };
+
+                    await call.RequestStream.WriteAsync(data);
+                    await Task.Delay(TimeSpan.FromSeconds(1));
+                }
+
+                await call.RequestStream.CompleteAsync();
+            });
+
+            var readTask = Task.Run(async () =>
+            {
+                await foreach (var response in call.ResponseStream.ReadAllAsync())
+                {
+                    Console.WriteLine($"Count : {response.Count}");
+                    Console.WriteLine($"Average : {response.Average}");
+                    Console.WriteLine($"Median : {response.Median}");
+                }
+            });
+
+            await Task.WhenAll(new[]
+            {
+                writeTask,
+                readTask
+            });
         }
     }
 }
