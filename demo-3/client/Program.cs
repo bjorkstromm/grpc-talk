@@ -12,6 +12,7 @@ using Grpc.Core.Interceptors;
 using System.Net.Http;
 using System.Web;
 using static Greet.Net.Greeter;
+using System.Threading;
 
 namespace client
 {
@@ -19,16 +20,43 @@ namespace client
     {
         static async Task Main(string[] args)
         {
+            var demo = args[0];
             using var channel = GrpcChannel.ForAddress("https://localhost:5001");
 
-            await ServerStreaming(channel);
-            await ClientStreaming(channel);
-            await BidirectionalStreaming(channel);
-
-            await AuthenticatedUnaryCall();
+            switch(demo)
+            {
+                case "server-streaming":
+                    await ServerStreaming(channel);
+                    break;
+                case "client-streaming":
+                    await ClientStreaming(channel);
+                    break;
+                case "bidirectional-streaming":
+                    await BidirectionalStreaming(channel);
+                    break;
+                case "authenticated-call":
+                    await AuthenticatedUnaryCall();
+                    break;
+                case "non-authenticated-call":
+                    await AuthenticatedUnaryCall(authenticate: false);
+                    break;
+                case "server-streaming-deadline":
+                    await ServerStreaming(channel,
+                        deadline: DateTime.UtcNow.AddSeconds(3));
+                    break;
+                case "server-streaming-cancellation":
+                    await ServerStreaming(channel,
+                        cancellationToken: new CancellationTokenSource(3000).Token);
+                    break;
+                default:
+                    break;
+            }
         }
 
-        private static async Task ServerStreaming(ChannelBase channel)
+        private static async Task ServerStreaming(
+            ChannelBase channel,
+            DateTime? deadline = null,
+            CancellationToken cancellationToken = default)
         {
             var client =  new TimeServiceClient(channel);
             using var reply = client.Subscribe(new SubscribeRequest
@@ -36,7 +64,7 @@ namespace client
                 Interval = 1,
                 Count = 5,
                 Unit = SubscribeRequest.Types.Unit.Seconds
-            });
+            }, deadline: deadline, cancellationToken: cancellationToken);
 
             await foreach (var timestamp in reply.ResponseStream.ReadAllAsync())
             {
@@ -111,10 +139,10 @@ namespace client
             });
         }
 
-        private static async Task AuthenticatedUnaryCall()
+        private static async Task AuthenticatedUnaryCall(bool authenticate = true)
         {
             var address = "https://localhost:5001";
-            var token = await Authenticate(address);
+            var token = authenticate ? await Authenticate(address) : string.Empty;
 
             using var channel = GrpcChannel.ForAddress(address);
             var invoker = channel.Intercept(metadata =>
