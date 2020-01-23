@@ -17,6 +17,25 @@ namespace server
     {
         private const int Port = 50051;
 
+        static async Task Main(string[] args)
+        {
+            
+            // PEM encoded certificate chain + PEM encoded private key
+            var certPair = new KeyCertificatePair(Cert, Key);
+            var server = new Server
+            {
+                Services = { Greeter.BindService(new GreeterService()) },
+                Ports = { new ServerPort("localhost", Port, new SslServerCredentials(new [] { certPair })) }
+            };
+            server.Start();
+
+            Console.WriteLine("Greeter server listening on port " + Port);
+            Console.WriteLine("Press any key to stop the server...");
+            Console.ReadKey();
+
+            await server.ShutdownAsync();
+        }
+
         // CN=localhost
         // Generated with
         // openssl req -newkey rsa:2048 -nodes -x509 -days 365
@@ -73,22 +92,5 @@ fwuSGj6RdAoy+ug49Utjf/RKeab5T4H1J5txy+P+/I6z+6O4UTXuDuQxCm0I0riF
 eCtsayb5SLti7lthLnl+3Y8c3D1Nq6sfAzBrw6g1AsYRxL9qP3aDO7cRLN5L/hkv
 rZ89c32B4pwMTBMmBN90vA==
 -----END PRIVATE KEY-----";
-
-        static async Task Main(string[] args)
-        {
-            var certPair = new KeyCertificatePair(Cert, Key);
-            var server = new Server
-            {
-                Services = { Greeter.BindService(new GreeterService()) },
-                Ports = { new ServerPort("localhost", Port, new SslServerCredentials(new [] { certPair })) }
-            };
-            server.Start();
-
-            Console.WriteLine("Greeter server listening on port " + Port);
-            Console.WriteLine("Press any key to stop the server...");
-            Console.ReadKey();
-
-            await server.ShutdownAsync();
-        }
     }
 }

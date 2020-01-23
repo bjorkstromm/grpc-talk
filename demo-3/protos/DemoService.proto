@@ -5,8 +5,15 @@ message Request {}
 message Reply {}
 
 service DemoService {
-    rpc Unary(Request) returns (Reply);
-    rpc ServerStreaming(Request) returns (stream Reply);
-    rpc ClientStreaming(stream Request) returns (Reply);
-    rpc BidirectionalStreaming(stream Request) returns (stream Reply);
+    rpc Unary(Request)
+        returns (Reply);
+
+    rpc ServerStreaming(Request)
+        returns (stream Reply);
+
+    rpc ClientStreaming(stream Request)
+        returns (Reply);
+
+    rpc BidirectionalStreaming(stream Request)
+        returns (stream Reply);
 }

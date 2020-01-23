@@ -43,7 +43,10 @@ namespace client
 
         static async Task Main(string[] args)
         {
+            // You should not do this. Or you should at least validate the certificate.
             var certificateRoot = GetCertificate("localhost", 50051);
+
+            // Trusted root certificates in PEM format. No integration with Certificate Store. :´(
             var channel = new Channel("localhost:50051", new SslCredentials(certificateRoot));
             var client = new Greeter.GreeterClient(channel);
             var reply = await client.SayHelloAsync(new HelloRequest { Name = "gRPC Core" });
