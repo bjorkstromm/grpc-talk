@@ -5,7 +5,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Protobuf Include="..\protos\*.proto" GrpcServices="Both" OutputDir="%(RelativePath)" CompileOutputs="false" />
+    <Protobuf Include="..\protos\*.proto"
+              GrpcServices="Both"
+              OutputDir="%(RelativePath)"
+              CompileOutputs="false" />
   </ItemGroup>
 
   <ItemGroup>
