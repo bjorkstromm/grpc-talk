@@ -1,1 +1,1 @@
-dotnet run --project client -- non-authenticated-call
+dotnet run --project client --no-build -- non-authenticated-call

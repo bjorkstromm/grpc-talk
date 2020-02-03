@@ -1,1 +1,1 @@
-dotnet run --project client -- bidirectional-streaming
+dotnet run --project client --no-build -- bidirectional-streaming

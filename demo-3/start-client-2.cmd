@@ -1,1 +1,1 @@
-dotnet run --project client -- client-streaming
+dotnet run --project client --no-build -- client-streaming
